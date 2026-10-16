@@ -167,7 +167,7 @@ export default function BatchDetailPage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-[#E5E7EB]">
           <div>
-            <p className="text-xs text-[#9CA3AF] font-medium">Department</p>
+            <p className="text-xs text-[#9CA3AF] font-medium">Sub Directory</p>
             <p className="text-sm text-[#374151] mt-0.5">{batch.department_name_snapshot}</p>
           </div>
           <div>
@@ -177,7 +177,14 @@ export default function BatchDetailPage() {
           <div>
             <p className="text-xs text-[#9CA3AF] font-medium">Submitted by</p>
             <p className="text-sm text-[#374151] mt-0.5">
-              {batch.submitted_by_name || batch.submitted_by_email || 'Anonymous'}
+              {batch.submitted_by_name && batch.submitted_by_email ? (
+                <>
+                  <span>{batch.submitted_by_name}</span>{' '}
+                  <span className="text-[#9CA3AF]">({batch.submitted_by_email})</span>
+                </>
+              ) : (
+                batch.submitted_by_name || batch.submitted_by_email || 'Anonymous'
+              )}
             </p>
           </div>
           <div>

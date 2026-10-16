@@ -1,26 +1,23 @@
-import { useRef, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { v4 as uuidv4 } from 'uuid'
-import { Plus, Trash2, Upload, Download } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { validateEmployeeRow } from '@/lib/validation'
-import { parseImportFile, validateImportFile, downloadTemplate } from '@/lib/importFile'
+import { getPortalAIToolSettings } from '@/lib/portalSettings'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import ImportPreviewModal from '@/components/public/ImportPreviewModal'
 import type { EmployeeRowDraft, Department, AITool } from '@/types'
-import type { ParsedImportRow } from '@/lib/importFile'
 
 const FORM_SLUG = import.meta.env.VITE_FORM_SLUG as string
 
 const FIELDS: { key: keyof Omit<EmployeeRowDraft, 'id' | 'errors'>; label: string; type: 'input' | 'textarea' }[] = [
   { key: 'employeeFullName', label: 'Employee Full Name', type: 'input' },
   { key: 'position', label: 'Position / Job Title', type: 'input' },
-  { key: 'employeeJustification', label: 'Employee Justification', type: 'textarea' },
-  { key: 'aiUsageJustification', label: 'AI Usage Justification', type: 'textarea' },
+  { key: 'aiUsageJustification', label: 'Employee role Justification for AI Usage', type: 'textarea' },
   { key: 'expectedImpact', label: 'Expected Impact', type: 'textarea' },
 ]
 
@@ -56,29 +53,39 @@ async function fetchAITools(): Promise<AITool[]> {
 
 export default function RequestFormPage() {
   const navigate = useNavigate()
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [departmentId, setDepartmentId] = useState('')
   const [aiToolId, setAiToolId] = useState('')
-  const [submittedByName, setSubmittedByName] = useState('')
-  const [submittedByEmail, setSubmittedByEmail] = useState('')
+  const [aiToolSettings, setAiToolSettings] = useState(getPortalAIToolSettings)
   const [rows, setRows] = useState<EmployeeRowDraft[]>([emptyRow()])
   const [formErrors, setFormErrors] = useState<{ departmentId?: string; aiToolId?: string }>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const [importPreview, setImportPreview] = useState<ParsedImportRow[]>([])
-  const [importModalOpen, setImportModalOpen] = useState(false)
-  const [importFileError, setImportFileError] = useState<string | null>(null)
-
   const { data: departments } = useQuery({ queryKey: ['departments-public'], queryFn: fetchDepartments })
   const { data: aiTools } = useQuery({ queryKey: ['ai-tools-public'], queryFn: fetchAITools })
+
+  useEffect(() => {
+    if (aiTools && aiTools.length > 0) {
+      const settings = getPortalAIToolSettings()
+      setAiToolSettings(settings)
+      const defaultTool = aiTools.find(t => t.id === settings.defaultAiToolId) ?? aiTools[0]
+      if (defaultTool) {
+        setAiToolId(defaultTool.id)
+      }
+    }
+  }, [aiTools])
 
   function updateRow(id: string, field: keyof Omit<EmployeeRowDraft, 'id' | 'errors'>, value: string) {
     setRows(prev =>
       prev.map(r => {
         if (r.id !== id) return r
-        const updated = { ...r, [field]: value }
+        const updated = {
+          ...r,
+          [field]: value,
+          // Sync justification to both fields so backend & DB constraints remain satisfied
+          ...(field === 'aiUsageJustification' ? { employeeJustification: value } : {}),
+        }
         // Re-validate this row
         const errors = validateEmployeeRow(updated)
         return { ...updated, errors }
@@ -97,46 +104,9 @@ export default function RequestFormPage() {
     })
   }
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    // Reset input so same file can be re-selected
-    e.target.value = ''
-    setImportFileError(null)
-
-    const fileError = validateImportFile(file)
-    if (fileError) {
-      setImportFileError(fileError)
-      return
-    }
-
-    const result = await parseImportFile(file)
-    if (result.error) {
-      setImportFileError(result.error)
-      return
-    }
-
-    setImportPreview(result.rows)
-    setImportModalOpen(true)
-  }
-
-  function handleImportConfirm(validRows: ParsedImportRow[]) {
-    setRows(prev => {
-      // If only one empty row, replace it; otherwise append
-      const hasOnlyEmptyRow =
-        prev.length === 1 &&
-        !prev[0].employeeFullName &&
-        !prev[0].position
-
-      const base = hasOnlyEmptyRow ? [] : prev
-      return [...base, ...validRows]
-    })
-    setImportModalOpen(false)
-  }
-
   function validateForm(): boolean {
     const errors: typeof formErrors = {}
-    if (!departmentId) errors.departmentId = 'Please select a department.'
+    if (!departmentId) errors.departmentId = 'Please select a Sub Directory.'
     if (!aiToolId) errors.aiToolId = 'Please select an AI tool.'
     setFormErrors(errors)
 
@@ -162,12 +132,10 @@ export default function RequestFormPage() {
       const payload = {
         departmentId,
         aiToolId,
-        submittedByName: submittedByName.trim() || undefined,
-        submittedByEmail: submittedByEmail.trim() || undefined,
         employees: rows.map(r => ({
           employeeFullName: r.employeeFullName.trim(),
           position: r.position.trim(),
-          employeeJustification: r.employeeJustification.trim(),
+          employeeJustification: (r.aiUsageJustification || r.employeeJustification).trim(),
           aiUsageJustification: r.aiUsageJustification.trim(),
           expectedImpact: r.expectedImpact.trim(),
         })),
@@ -201,6 +169,8 @@ export default function RequestFormPage() {
     }
   }
 
+  const selectedTool = aiTools?.find(t => t.id === aiToolId)
+
   return (
     <div className="min-h-screen bg-[#F3F4F6] py-10 px-4">
       <div className="max-w-4xl mx-auto">
@@ -213,12 +183,12 @@ export default function RequestFormPage() {
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-6">
-          {/* Department & AI Tool */}
+          {/* Sub Directory & AI Tool */}
           <div className="bg-white rounded-lg border border-[#E5E7EB] p-6">
             <h2 className="text-base font-semibold text-[#111827] mb-4">Request Details</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="department">Department</Label>
+                <Label htmlFor="department">Sub Directory</Label>
                 <select
                   id="department"
                   value={departmentId}
@@ -227,7 +197,7 @@ export default function RequestFormPage() {
                   aria-describedby={formErrors.departmentId ? 'dept-error' : undefined}
                   aria-invalid={!!formErrors.departmentId}
                 >
-                  <option value="">Select department...</option>
+                  <option value="">Select Sub Directory...</option>
                   {departments?.map(d => (
                     <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
@@ -239,47 +209,33 @@ export default function RequestFormPage() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="ai-tool">AI Tool</Label>
-                <select
-                  id="ai-tool"
-                  value={aiToolId}
-                  onChange={e => { setAiToolId(e.target.value); setFormErrors(prev => ({ ...prev, aiToolId: undefined })) }}
-                  className="w-full border border-[#E5E7EB] rounded-md px-3 py-2 text-sm bg-white text-[#374151] focus:outline-none focus:ring-2 focus:ring-[#B91C1C]"
-                  aria-describedby={formErrors.aiToolId ? 'tool-error' : undefined}
-                  aria-invalid={!!formErrors.aiToolId}
-                >
-                  <option value="">Select AI tool...</option>
-                  {aiTools?.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
+                {aiToolSettings.isChangeable ? (
+                  <select
+                    id="ai-tool"
+                    value={aiToolId}
+                    onChange={e => { setAiToolId(e.target.value); setFormErrors(prev => ({ ...prev, aiToolId: undefined })) }}
+                    className="w-full border border-[#E5E7EB] rounded-md px-3 py-2 text-sm bg-white text-[#374151] focus:outline-none focus:ring-2 focus:ring-[#B91C1C]"
+                    aria-describedby={formErrors.aiToolId ? 'tool-error' : undefined}
+                    aria-invalid={!!formErrors.aiToolId}
+                  >
+                    <option value="">Select AI tool...</option>
+                    {aiTools?.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="flex items-center justify-between w-full border border-[#E5E7EB] bg-[#F9FAFB] rounded-md px-3 py-2 text-sm text-[#111827]">
+                    <span className="font-medium text-[#111827]">
+                      {selectedTool?.name || (aiTools && aiTools.length > 0 ? aiTools[0].name : 'Loading AI Tool...')}
+                    </span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-[#E5E7EB] text-[#4B5563]">
+                      Default
+                    </span>
+                  </div>
+                )}
                 {formErrors.aiToolId && (
                   <p id="tool-error" role="alert" className="text-xs text-[#B91C1C]">{formErrors.aiToolId}</p>
                 )}
-              </div>
-            </div>
-
-            {/* Optional requester info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-[#E5E7EB]">
-              <div className="space-y-1.5">
-                <Label htmlFor="requester-name">Your Name <span className="text-[#9CA3AF] font-normal">(optional)</span></Label>
-                <Input
-                  id="requester-name"
-                  value={submittedByName}
-                  onChange={e => setSubmittedByName(e.target.value)}
-                  placeholder="Jane Smith"
-                  autoComplete="name"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="requester-email">Your Email <span className="text-[#9CA3AF] font-normal">(optional)</span></Label>
-                <Input
-                  id="requester-email"
-                  type="email"
-                  value={submittedByEmail}
-                  onChange={e => setSubmittedByEmail(e.target.value)}
-                  placeholder="jane@company.com"
-                  autoComplete="email"
-                />
               </div>
             </div>
           </div>
@@ -290,41 +246,7 @@ export default function RequestFormPage() {
               <h2 className="text-base font-semibold text-[#111827]">
                 Employees <span className="text-[#9CA3AF] font-normal text-sm">({rows.length})</span>
               </h2>
-              <div className="flex gap-2">
-                {/* Import button */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload className="h-3.5 w-3.5" aria-hidden="true" />
-                  Import
-                </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.csv"
-                  className="sr-only"
-                  aria-label="Import employees from file"
-                  onChange={handleFileChange}
-                />
-                {/* Download template */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={downloadTemplate}
-                >
-                  <Download className="h-3.5 w-3.5" aria-hidden="true" />
-                  Template
-                </Button>
-              </div>
             </div>
-
-            {importFileError && (
-              <p role="alert" className="text-sm text-[#B91C1C] mb-3">{importFileError}</p>
-            )}
 
             <div className="space-y-6">
               {rows.map((row, idx) => (
@@ -405,14 +327,6 @@ export default function RequestFormPage() {
           </div>
         </form>
       </div>
-
-      {/* Import preview modal */}
-      <ImportPreviewModal
-        open={importModalOpen}
-        rows={importPreview}
-        onConfirm={handleImportConfirm}
-        onCancel={() => setImportModalOpen(false)}
-      />
     </div>
   )
 }

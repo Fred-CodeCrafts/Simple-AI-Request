@@ -92,7 +92,7 @@ export default function BatchListPage() {
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9CA3AF]" aria-hidden="true" />
           <Input
-            placeholder="Search reference, department, tool..."
+            placeholder="Search reference, sub directory, tool..."
             value={search}
             onChange={e => handleSearch(e.target.value)}
             className="pl-9"
@@ -127,7 +127,7 @@ export default function BatchListPage() {
               <thead>
                 <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB]">
                   <th className="text-left px-6 py-3 font-medium text-[#374151]">Reference</th>
-                  <th className="text-left px-6 py-3 font-medium text-[#374151]">Department</th>
+                  <th className="text-left px-6 py-3 font-medium text-[#374151]">Sub Directory</th>
                   <th className="text-left px-6 py-3 font-medium text-[#374151]">AI Tool</th>
                   <th className="text-left px-6 py-3 font-medium text-[#374151]">Employees</th>
                   <th className="text-left px-6 py-3 font-medium text-[#374151]">Submitted</th>

@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 const navItems = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/admin/batches', label: 'Request Batches', icon: FileStack },
-  { to: '/admin/departments', label: 'Departments', icon: Building2 },
+  { to: '/admin/departments', label: 'Sub Directories', icon: Building2 },
   { to: '/admin/ai-tools', label: 'AI Tools', icon: Cpu },
   { to: '/admin/account', label: 'Account', icon: User },
 ]

@@ -46,7 +46,7 @@ export default function DepartmentsPage() {
     // Case-insensitive uniqueness check
     const exists = departments?.some(d => d.name.toLowerCase() === name.toLowerCase())
     if (exists) {
-      setAddError('A department with this name already exists.')
+      setAddError('A sub directory with this name already exists.')
       return
     }
 
@@ -59,7 +59,7 @@ export default function DepartmentsPage() {
       }
       await queryClient.invalidateQueries({ queryKey: ['departments-admin'] })
       setNewName('')
-      toast({ title: 'Department added', description: `"${name}" has been created.` })
+      toast({ title: 'Sub Directory added', description: `"${name}" has been created.` })
     } finally {
       setAddLoading(false)
     }
@@ -72,7 +72,7 @@ export default function DepartmentsPage() {
       .eq('id', dept.id)
 
     if (error) {
-      toast({ title: 'Error', description: 'Failed to update department.', variant: 'destructive' })
+      toast({ title: 'Error', description: 'Failed to update sub directory.', variant: 'destructive' })
       return
     }
     await queryClient.invalidateQueries({ queryKey: ['departments-admin'] })
@@ -90,7 +90,7 @@ export default function DepartmentsPage() {
       d => d.name.toLowerCase() === name.toLowerCase() && d.id !== renameDialog.id
     )
     if (exists) {
-      setRenameError('A department with this name already exists.')
+      setRenameError('A sub directory with this name already exists.')
       return
     }
 
@@ -107,7 +107,7 @@ export default function DepartmentsPage() {
       }
       await queryClient.invalidateQueries({ queryKey: ['departments-admin'] })
       setRenameDialog(null)
-      toast({ title: 'Renamed', description: `Department renamed to "${name}".` })
+      toast({ title: 'Renamed', description: `Sub Directory renamed to "${name}".` })
     } finally {
       setRenameLoading(false)
     }
@@ -115,19 +115,19 @@ export default function DepartmentsPage() {
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold text-[#111827] mb-6">Departments</h1>
+      <h1 className="text-2xl font-bold text-[#111827] mb-6">Sub Directories</h1>
 
       {/* Add form */}
       <div className="bg-white rounded-lg border border-[#E5E7EB] p-6 mb-6">
-        <h2 className="text-base font-semibold text-[#111827] mb-4">Add Department</h2>
+        <h2 className="text-base font-semibold text-[#111827] mb-4">Add Sub Directory</h2>
         <form onSubmit={handleAdd} className="flex gap-3">
           <div className="flex-1 max-w-sm space-y-1">
-            <Label htmlFor="dept-name" className="sr-only">Department name</Label>
+            <Label htmlFor="dept-name" className="sr-only">Sub Directory name</Label>
             <Input
               id="dept-name"
               value={newName}
               onChange={e => { setNewName(e.target.value); setAddError(null) }}
-              placeholder="Department name"
+              placeholder="Sub Directory name"
               aria-describedby={addError ? 'dept-add-error' : undefined}
             />
             {addError && (
@@ -135,7 +135,7 @@ export default function DepartmentsPage() {
             )}
           </div>
           <Button type="submit" disabled={addLoading || !newName.trim()}>
-            {addLoading ? 'Adding...' : 'Add Department'}
+            {addLoading ? 'Adding...' : 'Add Sub Directory'}
           </Button>
         </form>
       </div>
@@ -149,7 +149,7 @@ export default function DepartmentsPage() {
             ))}
           </div>
         ) : !departments?.length ? (
-          <div className="p-12 text-center text-sm text-[#9CA3AF]">No departments yet.</div>
+          <div className="p-12 text-center text-sm text-[#9CA3AF]">No sub directories yet.</div>
         ) : (
           <table className="w-full text-sm">
             <thead>
@@ -200,7 +200,7 @@ export default function DepartmentsPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rename Department</DialogTitle>
+            <DialogTitle>Rename Sub Directory</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleRename} className="space-y-3 py-2">
             <div className="space-y-1.5">
@@ -209,7 +209,7 @@ export default function DepartmentsPage() {
                 id="rename-dept"
                 value={renameName}
                 onChange={e => { setRenameName(e.target.value); setRenameError(null) }}
-                placeholder="Department name"
+                placeholder="Sub Directory name"
               />
               {renameError && (
                 <p role="alert" className="text-xs text-[#B91C1C]">{renameError}</p>

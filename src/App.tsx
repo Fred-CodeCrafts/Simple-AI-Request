@@ -39,6 +39,7 @@ export default function App() {
             <Route path="batches" element={<BatchListPage />} />
             <Route path="batches/:id" element={<BatchDetailPage />} />
             <Route path="departments" element={<DepartmentsPage />} />
+            <Route path="sub-directories" element={<DepartmentsPage />} />
             <Route path="ai-tools" element={<AIToolsPage />} />
             <Route path="account" element={<AccountPage />} />
             <Route index element={<Navigate to="dashboard" replace />} />

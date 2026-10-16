@@ -13,6 +13,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { toast } from '@/hooks/useToast'
+import { getPortalAIToolSettings, savePortalAIToolSettings } from '@/lib/portalSettings'
 import type { AITool } from '@/types'
 
 async function fetchAITools(): Promise<AITool[]> {
@@ -36,10 +37,37 @@ export default function AIToolsPage() {
   const [editError, setEditError] = useState<string | null>(null)
   const [editLoading, setEditLoading] = useState(false)
 
+  const [formSettings, setFormSettings] = useState(getPortalAIToolSettings)
+
   const { data: tools, isLoading } = useQuery({
     queryKey: ['ai-tools-admin'],
     queryFn: fetchAITools,
   })
+
+  const activeTools = tools?.filter(t => t.is_active) ?? []
+  const effectiveDefaultId =
+    formSettings.defaultAiToolId && activeTools.some(t => t.id === formSettings.defaultAiToolId)
+      ? formSettings.defaultAiToolId
+      : activeTools[0]?.id
+
+  function handleSelectDefaultTool(id: string) {
+    const updated = { ...formSettings, defaultAiToolId: id }
+    setFormSettings(updated)
+    savePortalAIToolSettings(updated)
+    toast({ title: 'Default AI Tool updated', description: 'Selected tool will appear as default on the request form.' })
+  }
+
+  function handleToggleChangeable(isChangeable: boolean) {
+    const updated = { ...formSettings, isChangeable }
+    setFormSettings(updated)
+    savePortalAIToolSettings(updated)
+    toast({
+      title: isChangeable ? 'AI Tool selection enabled' : 'AI Tool locked to default',
+      description: isChangeable
+        ? 'Requesters can now choose from active AI tools.'
+        : 'Requesters cannot change the AI tool on the form.',
+    })
+  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -128,6 +156,44 @@ export default function AIToolsPage() {
     <div className="p-8">
       <h1 className="text-2xl font-bold text-[#111827] mb-6">AI Tools</h1>
 
+      {/* Public Form Settings */}
+      <div className="bg-white rounded-lg border border-[#E5E7EB] p-6 mb-6">
+        <h2 className="text-base font-semibold text-[#111827] mb-1">Public Request Form Settings</h2>
+        <p className="text-xs text-[#9CA3AF] mb-4">
+          Control which AI tool is selected by default on the public request form, and whether requesters can change it.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+          <div className="space-y-1.5">
+            <Label htmlFor="default-tool-select">Default AI Tool</Label>
+            <select
+              id="default-tool-select"
+              value={effectiveDefaultId || ''}
+              onChange={e => handleSelectDefaultTool(e.target.value)}
+              className="w-full border border-[#E5E7EB] rounded-md px-3 py-2 text-sm bg-white text-[#374151] focus:outline-none focus:ring-2 focus:ring-[#B91C1C]"
+              disabled={activeTools.length === 0}
+            >
+              {activeTools.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center space-x-3 pb-2">
+            <input
+              type="checkbox"
+              id="toggle-changeable"
+              checked={formSettings.isChangeable}
+              onChange={e => handleToggleChangeable(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-[#B91C1C] focus:ring-[#B91C1C] cursor-pointer"
+            />
+            <Label htmlFor="toggle-changeable" className="cursor-pointer text-sm font-medium text-[#374151]">
+              Allow requesters to change AI Tool on form
+            </Label>
+          </div>
+        </div>
+      </div>
+
       {/* Add form */}
       <div className="bg-white rounded-lg border border-[#E5E7EB] p-6 mb-6">
         <h2 className="text-base font-semibold text-[#111827] mb-4">Add AI Tool</h2>
@@ -185,7 +251,14 @@ export default function AIToolsPage() {
             <tbody>
               {tools.map(tool => (
                 <tr key={tool.id} className="border-b border-[#E5E7EB] last:border-0">
-                  <td className="px-6 py-3 font-medium text-[#111827]">{tool.name}</td>
+                  <td className="px-6 py-3 font-medium text-[#111827]">
+                    <span>{tool.name}</span>
+                    {tool.id === effectiveDefaultId && (
+                      <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-red-100 text-[#B91C1C]">
+                        Default on Form
+                      </span>
+                    )}
+                  </td>
                   <td className="px-6 py-3 text-[#9CA3AF] text-xs max-w-xs truncate">
                     {tool.description ?? '—'}
                   </td>

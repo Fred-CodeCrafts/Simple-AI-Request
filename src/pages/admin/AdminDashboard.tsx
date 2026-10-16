@@ -102,7 +102,7 @@ export default function AdminDashboard() {
               <thead>
                 <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB]">
                   <th className="text-left px-6 py-3 font-medium text-[#374151]">Reference</th>
-                  <th className="text-left px-6 py-3 font-medium text-[#374151]">Department</th>
+                  <th className="text-left px-6 py-3 font-medium text-[#374151]">Sub Directory</th>
                   <th className="text-left px-6 py-3 font-medium text-[#374151]">AI Tool</th>
                   <th className="text-left px-6 py-3 font-medium text-[#374151]">Submitted</th>
                   <th className="text-left px-6 py-3 font-medium text-[#374151]">Status</th>

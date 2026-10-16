@@ -51,8 +51,8 @@ function fieldLabel(field: keyof typeof FIELD_LIMITS): string {
   const labels: Record<keyof typeof FIELD_LIMITS, string> = {
     employeeFullName: 'Employee full name',
     position: 'Position',
-    employeeJustification: 'Employee justification',
-    aiUsageJustification: 'AI usage justification',
+    employeeJustification: 'Employee role Justification for AI Usage',
+    aiUsageJustification: 'Employee role Justification for AI Usage',
     expectedImpact: 'Expected impact',
   }
   return labels[field]
