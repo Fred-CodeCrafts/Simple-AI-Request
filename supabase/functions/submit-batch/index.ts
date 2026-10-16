@@ -1,10 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const CORS_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') ?? '*'
-
 const corsHeaders = {
-  'Access-Control-Allow-Origin': CORS_ORIGIN,
+  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
@@ -52,7 +50,6 @@ serve(async (req) => {
     })
   }
 
-  // Log this request for rate limiting
   await supabase.from('rate_limits').insert({ ip_address: ip })
 
   let body: unknown
@@ -67,7 +64,6 @@ serve(async (req) => {
 
   const payload = body as Record<string, unknown>
 
-  // Validate required top-level fields
   if (!payload.departmentId || typeof payload.departmentId !== 'string') {
     return new Response(JSON.stringify({ error: 'departmentId is required' }), {
       status: 422,
@@ -95,7 +91,6 @@ serve(async (req) => {
     })
   }
 
-  // Validate each employee row
   const fieldLimits: Record<string, number> = {
     employeeFullName: 255,
     position: 255,
@@ -123,7 +118,6 @@ serve(async (req) => {
     }
   }
 
-  // Validate department exists and is active
   const { data: dept } = await supabase
     .from('departments')
     .select('id, name')
@@ -138,7 +132,6 @@ serve(async (req) => {
     })
   }
 
-  // Validate AI tool exists and is active
   const { data: tool } = await supabase
     .from('ai_tools')
     .select('id, name')
@@ -153,7 +146,6 @@ serve(async (req) => {
     })
   }
 
-  // Generate unique reference number
   let referenceNumber = ''
   let attempts = 0
   while (attempts < 10) {
@@ -177,7 +169,6 @@ serve(async (req) => {
     })
   }
 
-  // Insert batch
   const { data: batch, error: batchError } = await supabase
     .from('request_batches')
     .insert({
@@ -200,7 +191,6 @@ serve(async (req) => {
     })
   }
 
-  // Insert access requests
   const accessRequests = (employees as Record<string, string>[]).map(emp => ({
     batch_id: batch.id,
     employee_full_name: emp.employeeFullName.trim(),
@@ -216,7 +206,6 @@ serve(async (req) => {
     .insert(accessRequests)
 
   if (requestsError) {
-    // Rollback: delete the batch
     await supabase.from('request_batches').delete().eq('id', batch.id)
     return new Response(JSON.stringify({ error: 'Submission failed. Please try again.' }), {
       status: 500,

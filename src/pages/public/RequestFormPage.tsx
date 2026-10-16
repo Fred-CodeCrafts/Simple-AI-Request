@@ -177,7 +177,11 @@ export default function RequestFormPage() {
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-batch`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
           body: JSON.stringify(payload),
         }
       )
