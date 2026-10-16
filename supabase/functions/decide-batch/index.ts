@@ -1,15 +1,30 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const CORS_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') ?? '*'
+function getCorsHeaders(req: Request) {
+  const reqOrigin = req.headers.get('Origin') ?? ''
+  const allowed = Deno.env.get('ALLOWED_ORIGIN') ?? '*'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': CORS_ORIGIN,
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  let allowOrigin = '*'
+  if (allowed !== '*') {
+    const list = allowed.split(/[\s,]+/).filter(Boolean)
+    if (list.includes(reqOrigin)) {
+      allowOrigin = reqOrigin
+    } else if (list.length > 0) {
+      allowOrigin = list[0]
+    }
+  }
+
+  return {
+    'Access-Control-Allow-Origin': allowOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  }
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req)
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
