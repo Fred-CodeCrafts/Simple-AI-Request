@@ -20,3 +20,6 @@ npm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Supabase local temp files (contain linked project refs — not for source control)
+supabase/.temp/
